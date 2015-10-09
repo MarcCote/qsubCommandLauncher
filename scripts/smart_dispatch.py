@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 import re
 import os
@@ -115,8 +116,8 @@ def main():
         command_line_history_file.write(command_line + "\n\n")
 
     # Launch the jobs
-    print "## {nb_commands} command(s) will be executed in {nb_jobs} job(s) ##".format(nb_commands=nb_commands, nb_jobs=len(pbs_filenames))
-    print "Batch UID:\n{batch_uid}".format(batch_uid=jobname)
+    print("## {nb_commands} command(s) will be executed in {nb_jobs} job(s) ##".format(nb_commands=nb_commands, nb_jobs=len(pbs_filenames)))
+    print("Batch UID:\n{batch_uid}".format(batch_uid=jobname))
     if not args.doNotLaunch:
         jobs_id = []
         for pbs_filename in pbs_filenames:
@@ -126,8 +127,8 @@ def main():
         with utils.open_with_lock(os.path.join(path_job, "jobs_id.txt"), 'a') as jobs_id_file:
             jobs_id_file.writelines(t.strftime("## %Y-%m-%d %H:%M:%S ##\n"))
             jobs_id_file.writelines("\n".join(jobs_id) + "\n")
-        print "\nJobs id:\n{jobs_id}".format(jobs_id=" ".join(jobs_id))
-    print "\nLogs, command, and jobs id related to this batch will be in:\n {smartdispatch_folder}".format(smartdispatch_folder=path_job)
+        print("\nJobs id:\n{jobs_id}".format(jobs_id=" ".join(jobs_id)))
+    print("\nLogs, command, and jobs id related to this batch will be in:\n {smartdispatch_folder}".format(smartdispatch_folder=path_job))
 
 
 def parse_arguments():
@@ -142,7 +143,7 @@ def parse_arguments():
     parser.add_argument('-c', '--coresPerCommand', type=int, required=False, help='How many cores a command needs.', default=1)
     parser.add_argument('-g', '--gpusPerCommand', type=int, required=False, help='How many gpus a command needs.', default=1)
     # parser.add_argument('-m', '--memPerCommand', type=float, required=False, help='How much memory a command needs (in Gb).')
-    parser.add_argument('-f', '--commandsFile', type=file, required=False, help='File containing commands to launch. Each command must be on a seperate line. (Replaces commandAndOptions)')
+    parser.add_argument('-f', '--commandsFile', type=str, required=False, help='File containing commands to launch. Each command must be on a seperate line. (Replaces commandAndOptions)')
 
     parser.add_argument('-l', '--modules', type=str, required=False, help='List of additional modules to load.', nargs='+')
     parser.add_argument('-x', '--doNotLaunch', action='store_true', help='Creates the QSUB files without launching them.')
@@ -165,6 +166,9 @@ def parse_arguments():
             parser.error("You need to specify a command to launch.")
         if args.queueName not in AVAILABLE_QUEUES and ((args.coresPerNode is None and args.gpusPerNode is None) or args.walltime is None):
             parser.error("Unknown queue, --coresPerNode/--gpusPerNode and --walltime must be set.")
+
+        if args.commandsFile is not None and not os.path.isfile(args.commandsFile):
+            parser.error("Command file does not exist: '{0}'.".format(args.commandsFile))
 
     return args
 
