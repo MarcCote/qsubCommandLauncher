@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
+import re
 import os
+import sys
 import argparse
 import time as t
 import numpy as np
@@ -77,7 +80,9 @@ def main():
             if not utils.yes_no_prompt("Do you want to continue?", 'n'):
                 exit()
 
-        command_manager.reset_running_commands()
+        if not args.onlyPending:
+            command_manager.reset_running_commands()
+
         nb_commands = command_manager.get_nb_commands_to_run()
 
     # If no pool size is specified the number of commands is taken
@@ -102,9 +107,17 @@ def main():
     job_generator = job_generator_factory(queue, commands, command_params, CLUSTER_NAME, path_job)
     pbs_filenames = job_generator.write_pbs_files(path_job_commands)
 
+    # Keep an history of command lines i.e. smart_dispatch.py commands.
+    with utils.open_with_lock(os.path.join(path_job, "command_line_history.txt"), 'a') as command_line_history_file:
+        command_line_history_file.write(t.strftime("## %Y-%m-%d %H:%M:%S ##\n"))
+        command_line = " ".join(sys.argv)
+        command_line = command_line.replace('"', r'\"')  # Make sure we can paste the command line as-is
+        command_line = re.sub(r'(\[)([^\[\]]*\\ [^\[\]]*)(\])', r'"\1\2\3"', command_line)  # Make sure we can paste the command line as-is
+        command_line_history_file.write(command_line + "\n\n")
+
     # Launch the jobs
-    print "## {nb_commands} command(s) will be executed in {nb_jobs} job(s) ##".format(nb_commands=nb_commands, nb_jobs=len(pbs_filenames))
-    print "Batch UID:\n{batch_uid}".format(batch_uid=jobname)
+    print("## {nb_commands} command(s) will be executed in {nb_jobs} job(s) ##".format(nb_commands=nb_commands, nb_jobs=len(pbs_filenames)))
+    print("Batch UID:\n{batch_uid}".format(batch_uid=jobname))
     if not args.doNotLaunch:
         jobs_id = []
         for pbs_filename in pbs_filenames:
@@ -114,8 +127,8 @@ def main():
         with utils.open_with_lock(os.path.join(path_job, "jobs_id.txt"), 'a') as jobs_id_file:
             jobs_id_file.writelines(t.strftime("## %Y-%m-%d %H:%M:%S ##\n"))
             jobs_id_file.writelines("\n".join(jobs_id) + "\n")
-        print "\nJobs id:\n{jobs_id}".format(jobs_id=" ".join(jobs_id))
-    print "\nLogs, command, and jobs id related to this batch will be in:\n {smartdispatch_folder}".format(smartdispatch_folder=path_job)
+        print("\nJobs id:\n{jobs_id}".format(jobs_id=" ".join(jobs_id)))
+    print("\nLogs, command, and jobs id related to this batch will be in:\n {smartdispatch_folder}".format(smartdispatch_folder=path_job))
 
 
 def parse_arguments():
@@ -130,7 +143,7 @@ def parse_arguments():
     parser.add_argument('-c', '--coresPerCommand', type=int, required=False, help='How many cores a command needs.', default=1)
     parser.add_argument('-g', '--gpusPerCommand', type=int, required=False, help='How many gpus a command needs.', default=1)
     # parser.add_argument('-m', '--memPerCommand', type=float, required=False, help='How much memory a command needs (in Gb).')
-    parser.add_argument('-f', '--commandsFile', type=file, required=False, help='File containing commands to launch. Each command must be on a seperate line. (Replaces commandAndOptions)')
+    parser.add_argument('-f', '--commandsFile', type=str, required=False, help='File containing commands to launch. Each command must be on a seperate line. (Replaces commandAndOptions)')
 
     parser.add_argument('-l', '--modules', type=str, required=False, help='List of additional modules to load.', nargs='+')
     parser.add_argument('-x', '--doNotLaunch', action='store_true', help='Creates the QSUB files without launching them.')
@@ -142,6 +155,7 @@ def parse_arguments():
     launch_parser.add_argument("commandAndOptions", help="Options for the commands.", nargs=argparse.REMAINDER)
 
     resume_parser = subparsers.add_parser('resume', help="Resume jobs from batch UID.")
+    resume_parser.add_argument('--onlyPending', action='store_true', help='Resume only pending commands.')
     resume_parser.add_argument("batch_uid", help="Batch UID of the jobs to resume.")
 
     args = parser.parse_args()
@@ -152,6 +166,9 @@ def parse_arguments():
             parser.error("You need to specify a command to launch.")
         if args.queueName not in AVAILABLE_QUEUES and ((args.coresPerNode is None and args.gpusPerNode is None) or args.walltime is None):
             parser.error("Unknown queue, --coresPerNode/--gpusPerNode and --walltime must be set.")
+
+        if args.commandsFile is not None and not os.path.isfile(args.commandsFile):
+            parser.error("Command file does not exist: '{0}'.".format(args.commandsFile))
 
     return args
 
@@ -166,6 +183,10 @@ def _gen_job_paths(jobname):
 
 
 def get_job_folders(jobname):
+    if os.path.isdir(jobname):
+        # We assume `jobname` is `path_job` repo, we extract the real `jobname`.
+        jobname = os.path.basename(os.path.abspath(jobname))
+
     path_job, path_job_logs, path_job_commands = _gen_job_paths(jobname)
 
     if not os.path.exists(path_job_commands):
