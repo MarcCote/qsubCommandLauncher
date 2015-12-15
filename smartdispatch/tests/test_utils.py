@@ -74,7 +74,7 @@ def test_open_with_lock():
         time.sleep(1)
 
     stdout, stderr = process.communicate()
-    assert_equal(stdout, "")
+    assert_equal(stdout, b"")
     assert_true("write-lock" in stderr, msg="Forcing a race condition, try increasing sleeping time above.")
     assert_true("Traceback" not in stderr, msg="Unexpected error: " + stderr)  # Check that there are no errors.
 
