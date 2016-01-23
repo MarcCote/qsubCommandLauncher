@@ -21,7 +21,7 @@ class TestJobGenerator(unittest.TestCase):
         self.mem_per_node = 32
         self.modules = ["cuda", "python"]
 
-        self.queue = Queue(self.name, self.cluster_name, self.walltime, self.cores, 0, self.modules)
+        self.queue = Queue(self.name, self.cluster_name, self.walltime, self.cores, 0, self.mem_per_node, self.modules)
         self.queue_gpu = Queue(self.name, self.cluster_name, self.walltime, self.cores, self.gpus, self.mem_per_node, self.modules)
 
     def tearDown(self):

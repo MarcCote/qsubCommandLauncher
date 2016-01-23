@@ -1,5 +1,8 @@
 import smartdispatch
-from StringIO import StringIO
+try:
+    from io import StringIO  # Python 3
+except ImportError:
+    from StringIO import StringIO  # Python 2
 
 from nose.tools import assert_true, assert_equal
 from numpy.testing import assert_array_equal
