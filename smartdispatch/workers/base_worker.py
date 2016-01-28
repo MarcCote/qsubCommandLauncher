@@ -15,6 +15,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('commands_filename', type=str, help='File containing all commands to execute.')
     parser.add_argument('logs_dir', type=str, help="Folder where to put commands' stdout and stderr.")
+    parser.add_argument('-N', type=int, help="Number of commands this worker should run.")
     args = parser.parse_args()
 
     # Check for invalid arguments
@@ -35,7 +36,8 @@ def main():
 
     command_manager = CommandManager(args.commands_filename)
 
-    while True:
+    command_finished = 0
+    while args.N is None or command_finished < args.N:
         command = command_manager.get_command_to_run()
 
         if command is None:
@@ -61,6 +63,7 @@ def main():
                 error_code = subprocess.call(command, stdout=stdout_file, stderr=stderr_file, shell=True)
 
         command_manager.set_running_command_as_finished(command, error_code)
+        command_finished += 1
 
 if __name__ == '__main__':
     main()
