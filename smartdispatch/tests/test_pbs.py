@@ -87,11 +87,16 @@ class TestPBS(unittest.TestCase):
         assert_equal(str(pbs), expected)
 
         # Create a more complex PBS file
+        prolog = ['echo "This is prolog1"',
+                  'echo "This is prolog2"']
         commands = ["cd $HOME; echo 1 2 3 1>> cmd1.o 2>> cmd1.e",
                     "cd $HOME; echo 3 2 1 1>> cmd1.o 2>> cmd1.e"]
+        epilog = ['echo "This is epilog1"',
+                  'echo "This is epilog2"']
         modules = ["CUDA_Toolkit/6.0", "python2.7"]
 
-        expected = """#!/bin/bash
+        expected = """\
+#!/bin/bash
 #PBS -q qtest@mp2
 #PBS -V
 #PBS -A xyz-123-ab
@@ -103,12 +108,19 @@ module load CUDA_Toolkit/6.0
 module load python2.7
 
 # Prolog #
+{prolog1}
+{prolog2}
 
 # Commands #
 {command1}
 {command2}
 
-# Epilog #""".format(command1=commands[0], command2=commands[1])
+# Epilog #
+{epilog1}
+{epilog2}""".format(
+            prolog1=prolog[0], prolog2=prolog[1],
+            command1=commands[0], command2=commands[1],
+            epilog1=epilog[0], epilog2=epilog[1])
 
         pbs = PBS(queue_name="qtest@mp2", walltime="01:00:00")
         pbs.add_resources(nodes="2:ppn=3:gpus=1")

@@ -37,7 +37,7 @@ def main():
 
     command_manager = CommandManager(args.commands_filename)
 
-    # Handle TERM signal gracefully by sending running commands to back to
+    # Handle TERM signal gracefully by sending running commands back to
     # the list of pending commands.
     def sigterm_handler(signal, frame):
         if sigterm_handler.triggered:

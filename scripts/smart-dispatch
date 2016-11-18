@@ -28,12 +28,18 @@ CLUSTER_NAME = utils.detect_cluster()
 AVAILABLE_QUEUES = get_available_queues(CLUSTER_NAME)
 LAUNCHER = utils.get_launcher(CLUSTER_NAME)
 
+# Autoresume settings.
+TIMEOUT_EXIT_CODE = 124
+AUTORESUME_TRIGGER_AFTER = '$(($PBS_WALLTIME - 60))'  # By default, 60s before the maximum walltime.
+AUTORESUME_WORKER_CALL_PREFIX = 'timeout -s TERM {trigger_after} '.format(trigger_after=AUTORESUME_TRIGGER_AFTER)
+AUTORESUME_WORKER_CALL_SUFFIX = ' WORKER_PIDS+=" $!"'
+AUTORESUME_PROLOG = 'WORKER_PIDS=""' 
 AUTORESUME_EPILOG = """\
 NEED_TO_RESUME=false
 for WORKER_PID in $WORKER_PIDS; do
     wait "$WORKER_PID"
     RETURN_CODE=$?
-    if [ $RETURN_CODE -eq 124 ]; then
+    if [ $RETURN_CODE -eq {timeout_exit_code} ]; then
         NEED_TO_RESUME=true
     fi
 done
@@ -41,7 +47,7 @@ if [ "$NEED_TO_RESUME" = true ]; then
     echo "Autoresuming using: {launcher} $PBS_FILENAME"
     {launcher} $PBS_FILENAME
 fi
-"""
+""".format(timeout_exit_code=TIMEOUT_EXIT_CODE)
 
 
 def main():
@@ -126,8 +132,8 @@ def main():
     worker_call_prefix = ''
     worker_call_suffix = ''
     if args.autoresume:
-        worker_call_prefix = 'timeout -s TERM $(($PBS_WALLTIME - 60)) '
-        worker_call_suffix = ' WORKER_PIDS+=" $!"'
+        worker_call_prefix = AUTORESUME_WORKER_CALL_PREFIX
+        worker_call_suffix = AUTORESUME_WORKER_CALL_SUFFIX
 
     COMMAND_STRING = 'cd "{cwd}"; {worker_call_prefix}python2 {worker_script} "{commands_file}" "{log_folder}" '\
                      '1>> "{log_folder}/worker/$PBS_JOBID\"\"_worker_{{ID}}.o" '\
@@ -155,7 +161,7 @@ def main():
     prolog = []
     epilog = ['wait']
     if args.autoresume:
-        prolog = ['WORKER_PIDS=""']
+        prolog = [AUTORESUME_PROLOG]
         epilog = [AUTORESUME_EPILOG.format(launcher=LAUNCHER if args.launcher is None else args.launcher)]
 
     job_generator = job_generator_factory(queue, commands, prolog, epilog, command_params, CLUSTER_NAME, path_job)
