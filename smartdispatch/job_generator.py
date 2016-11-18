@@ -134,10 +134,6 @@ class JobGenerator(object):
         for pbs in self.pbs_list:
             pbs.add_options(A=account_name)
 
-    def add_auto_restart(self):
-        for command in self.commands:
-            new_command = ''
-
 
 class MammouthJobGenerator(JobGenerator):
 
