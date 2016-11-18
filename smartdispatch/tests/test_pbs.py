@@ -126,7 +126,9 @@ module load python2.7
         pbs.add_resources(nodes="2:ppn=3:gpus=1")
         pbs.add_options(A="xyz-123-ab")
         pbs.add_modules_to_load(*modules)
+        pbs.add_to_prolog(*prolog)
         pbs.add_commands(*commands)
+        pbs.add_to_epilog(*epilog)
 
         assert_equal(str(pbs), expected)
 
