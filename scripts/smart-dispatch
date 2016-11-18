@@ -158,7 +158,7 @@ def main():
         prolog = ['WORKER_PIDS=""']
         epilog = [AUTORESUME_EPILOG.format(launcher=LAUNCHER if args.launcher is None else args.launcher)]
 
-    job_generator = job_generator_factory(queue, prolog, commands, epilog, command_params, CLUSTER_NAME, path_job)
+    job_generator = job_generator_factory(queue, commands, prolog, epilog, command_params, CLUSTER_NAME, path_job)
     if args.pbsFlags is not None:
         job_generator.add_pbs_flags(args.pbsFlags.split(' '))
     pbs_filenames = job_generator.write_pbs_files(path_job_commands)

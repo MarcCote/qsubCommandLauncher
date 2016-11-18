@@ -6,17 +6,17 @@ from smartdispatch.pbs import PBS
 from smartdispatch import utils
 
 
-def job_generator_factory(queue, prolog, commands, epilog, command_params={}, cluster_name=None, base_path="./"):
+def job_generator_factory(queue, commands, prolog=[], epilog=[], command_params={}, cluster_name=None, base_path="./"):
     if cluster_name == "guillimin":
-        return GuilliminJobGenerator(queue, prolog, commands, epilog, command_params, base_path)
+        return GuilliminJobGenerator(queue, commands, prolog, epilog, command_params, base_path)
     elif cluster_name == "mammouth":
-        return MammouthJobGenerator(queue, prolog, commands, epilog, command_params, base_path)
+        return MammouthJobGenerator(queue, commands, prolog, epilog, command_params, base_path)
     elif cluster_name == "helios":
-        return HeliosJobGenerator(queue, prolog, commands, epilog, command_params, base_path)
+        return HeliosJobGenerator(queue, commands, prolog, epilog, command_params, base_path)
     elif cluster_name == "hades":
-        return HadesJobGenerator(queue, prolog, commands, epilog, command_params, base_path)
+        return HadesJobGenerator(queue, commands, prolog, epilog, command_params, base_path)
 
-    return JobGenerator(queue, prolog, commands, epilog, command_params, base_path)
+    return JobGenerator(queue, commands, prolog, epilog, command_params, base_path)
 
 
 class JobGenerator(object):
@@ -33,7 +33,7 @@ class JobGenerator(object):
         information about the commands
     """
 
-    def __init__(self, queue, prolog, commands, epilog, command_params={}, base_path="./"):
+    def __init__(self, queue, commands, prolog=[], epilog=[], command_params={}, base_path="./"):
         self.prolog = prolog
         self.commands = commands
         self.epilog = epilog
