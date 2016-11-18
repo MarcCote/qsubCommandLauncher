@@ -44,8 +44,8 @@ for WORKER_PID in $WORKER_PIDS; do
     fi
 done
 if [ "$NEED_TO_RESUME" = true ]; then
-    echo "Autoresuming using: {launcher} $PBS_FILENAME"
-    {launcher} $PBS_FILENAME
+    echo "Autoresuming using: {{launcher}} $PBS_FILENAME"
+    {{launcher}} $PBS_FILENAME
 fi
 """.format(timeout_exit_code=TIMEOUT_EXIT_CODE)
 
