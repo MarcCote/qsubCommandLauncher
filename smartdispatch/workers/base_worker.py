@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
+import signal
 import argparse
 import subprocess
 import logging
@@ -35,8 +37,24 @@ def main():
 
     command_manager = CommandManager(args.commands_filename)
 
+    # Handle TERM signal gracefully by sending running commands to back to
+    # the list of pending commands.
+    def sigterm_handler(signal, frame):
+        if sigterm_handler.triggered:
+            return
+        else:
+            sigterm_handler.triggered = True
+        if sigterm_handler.command is not None:
+            command_manager.set_running_command_as_pending(sigterm_handler.command)
+        sys.exit(0)
+
+    sigterm_handler.triggered = False
+    sigterm_handler.command = None
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
     while True:
         command = command_manager.get_command_to_run()
+        sigterm_handler.command = command
 
         if command is None:
             break

@@ -28,6 +28,21 @@ CLUSTER_NAME = utils.detect_cluster()
 AVAILABLE_QUEUES = get_available_queues(CLUSTER_NAME)
 LAUNCHER = utils.get_launcher(CLUSTER_NAME)
 
+AUTORESUME_EPILOG = """\
+NEED_TO_RESUME=false
+for WORKER_PID in $WORKER_PIDS; do
+    wait "$WORKER_PID"
+    RETURN_CODE=$?
+    if [ $RETURN_CODE -eq 124 ]; then
+        NEED_TO_RESUME=true
+    fi
+done
+if [ "$NEED_TO_RESUME" = true ]; then
+    echo "Autoresuming using: {launcher} $PBS_FILENAME"
+    {launcher} $PBS_FILENAME
+fi
+"""
+
 
 def main():
     # Necessary if we want 'logging.info' to appear in stderr.
@@ -107,10 +122,21 @@ def main():
 
     # Generating all the worker commands
     worker_script = pjoin(os.path.dirname(smartdispatch.__file__), 'workers', 'base_worker.py')
-    COMMAND_STRING = 'cd "{cwd}"; python2 {worker_script} "{commands_file}" "{log_folder}" '\
+
+    worker_call_prefix = ''
+    worker_call_suffix = ''
+    if args.autoresume:
+        # worker_call_prefix = 'timeout $(($PBS_WALLTIME - 60)) -s TERM '
+        worker_call_prefix = 'timeout -s TERM 10 '
+        worker_call_suffix = ' WORKER_PIDS+=" $!"'
+
+    COMMAND_STRING = 'cd "{cwd}"; {worker_call_prefix}python2 {worker_script} "{commands_file}" "{log_folder}" '\
                      '1>> "{log_folder}/worker/$PBS_JOBID\"\"_worker_{{ID}}.o" '\
-                     '2>> "{log_folder}/worker/$PBS_JOBID\"\"_worker_{{ID}}.e" '
-    COMMAND_STRING = COMMAND_STRING.format(cwd=os.getcwd(), worker_script=worker_script, commands_file=command_manager._commands_filename, log_folder=path_job_logs)
+                     '2>> "{log_folder}/worker/$PBS_JOBID\"\"_worker_{{ID}}.e" &'\
+                     '{worker_call_suffix}'
+    COMMAND_STRING = COMMAND_STRING.format(cwd=os.getcwd(), worker_call_prefix=worker_call_prefix, worker_script=worker_script, 
+                                           commands_file=command_manager._commands_filename, log_folder=path_job_logs,
+                                           worker_call_suffix=worker_call_suffix)
     commands = [COMMAND_STRING.format(ID=i) for i in range(args.pool)]
 
     # TODO: use args.memPerNode instead of args.memPerNode
@@ -127,7 +153,13 @@ def main():
                       'mem_per_command': None  # args.memPerCommand
                       }
 
-    job_generator = job_generator_factory(queue, commands, command_params, CLUSTER_NAME, path_job)
+    prolog = []
+    epilog = ['wait']
+    if args.autoresume:
+        prolog = ['WORKER_PIDS=""']
+        epilog = [AUTORESUME_EPILOG.format(launcher=LAUNCHER if args.launcher is None else args.launcher)]
+
+    job_generator = job_generator_factory(queue, prolog, commands, epilog, command_params, CLUSTER_NAME, path_job)
     if args.pbsFlags is not None:
         job_generator.add_pbs_flags(args.pbsFlags.split(' '))
     pbs_filenames = job_generator.write_pbs_files(path_job_commands)
@@ -138,7 +170,8 @@ def main():
     if not args.doNotLaunch:
         jobs_id = []
         for pbs_filename in pbs_filenames:
-            qsub_output = check_output('{launcher} {pbs_filename}'.format(launcher=LAUNCHER if args.launcher is None else args.launcher, pbs_filename=pbs_filename), shell=True)
+            qsub_output = check_output('PBS_FILENAME={pbs_filename} {launcher} {pbs_filename}'.format(
+                launcher=LAUNCHER if args.launcher is None else args.launcher, pbs_filename=pbs_filename), shell=True)
             jobs_id += [qsub_output.strip()]
 
             # On some clusters, SRMJID and PBS_JOBID don't match
@@ -172,6 +205,7 @@ def parse_arguments():
 
     parser.add_argument('-l', '--modules', type=str, required=False, help='List of additional modules to load.', nargs='+')
     parser.add_argument('-x', '--doNotLaunch', action='store_true', help='Generate all the files without launching the job.')
+    parser.add_argument('-r', '--autoresume', action='store_true', help='Requeue the job when the running time hits the maximum walltime allowed on the cluster.')
 
     parser.add_argument('-p', '--pool', type=int, help="Number of workers that will be consuming commands. Default: Nb commands")
     parser.add_argument('--pbsFlags', type=str, help='ADVANCED USAGE: Allow to pass a space seperated list of PBS flags. Ex:--pbsFlags="-lfeature=k80 -t0-4"')
