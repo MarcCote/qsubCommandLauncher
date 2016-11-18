@@ -78,9 +78,11 @@ class TestPBS(unittest.TestCase):
 
 # Modules #
 
+# Prolog #
+
 # Commands #
 
-wait"""
+# Epilog #"""
         pbs = PBS(queue_name="qtest@mp2", walltime="01:00:00")
         assert_equal(str(pbs), expected)
 
@@ -100,11 +102,13 @@ wait"""
 module load CUDA_Toolkit/6.0
 module load python2.7
 
-# Commands #
-{command1} &
-{command2} &
+# Prolog #
 
-wait""".format(command1=commands[0], command2=commands[1])
+# Commands #
+{command1}
+{command2}
+
+# Epilog #""".format(command1=commands[0], command2=commands[1])
 
         pbs = PBS(queue_name="qtest@mp2", walltime="01:00:00")
         pbs.add_resources(nodes="2:ppn=3:gpus=1")

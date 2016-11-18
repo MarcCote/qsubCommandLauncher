@@ -29,6 +29,10 @@ class JobGenerator(object):
         queue on which commands will be executed
     commands : list of str
         commands to put in PBS files
+    prolog : list of str
+        code to execute before the commands
+    epilog : list of str
+        code to execute after the commands
     command_params : dict
         information about the commands
     """
