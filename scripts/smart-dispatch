@@ -126,8 +126,7 @@ def main():
     worker_call_prefix = ''
     worker_call_suffix = ''
     if args.autoresume:
-        # worker_call_prefix = 'timeout $(($PBS_WALLTIME - 60)) -s TERM '
-        worker_call_prefix = 'timeout -s TERM 10 '
+        worker_call_prefix = 'timeout -s TERM $(($PBS_WALLTIME - 60)) '
         worker_call_suffix = ' WORKER_PIDS+=" $!"'
 
     COMMAND_STRING = 'cd "{cwd}"; {worker_call_prefix}python2 {worker_script} "{commands_file}" "{log_folder}" '\
