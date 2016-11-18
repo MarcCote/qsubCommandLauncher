@@ -41,7 +41,7 @@ class TestJobGenerator(object):
     def test_generate_pbs2_cpu(self):
         # Should needs two PBS file
         command_params = {'nb_cores_per_command': self.cores // 2}
-        job_generator = JobGenerator(self.queue, self.commands, command_params)
+        job_generator = JobGenerator(self.queue, self.commands, command_params=command_params)
         assert_equal(len(job_generator.pbs_list), 2)
         assert_equal(job_generator.pbs_list[0].commands, self.commands[:2])
         assert_equal(job_generator.pbs_list[1].commands, self.commands[2:])
@@ -49,7 +49,7 @@ class TestJobGenerator(object):
     def test_generate_pbs4_cpu(self):
         # Should needs four PBS file
         command_params = {'nb_cores_per_command': self.cores}
-        job_generator = JobGenerator(self.queue, self.commands, command_params)
+        job_generator = JobGenerator(self.queue, self.commands, command_params=command_params)
         assert_equal(len(job_generator.pbs_list), 4)
         assert_equal([pbs.commands[0] for pbs in job_generator.pbs_list], self.commands)
 
@@ -64,7 +64,7 @@ class TestJobGenerator(object):
         # Test nb_gpus_per_command argument
         # Should needs two PBS file
         command_params = {'nb_gpus_per_command': self.gpus // 2}
-        job_generator = JobGenerator(self.queue_gpu, self.commands, command_params)
+        job_generator = JobGenerator(self.queue_gpu, self.commands, command_params=command_params)
         assert_equal(len(job_generator.pbs_list), 2)
         assert_equal(job_generator.pbs_list[0].commands, self.commands[:2])
         assert_equal(job_generator.pbs_list[1].commands, self.commands[2:])
@@ -72,7 +72,7 @@ class TestJobGenerator(object):
     def test_generate_pbs4_gpu(self):
         # Should needs four PBS files
         command_params = {'nb_gpus_per_command': self.gpus}
-        job_generator = JobGenerator(self.queue_gpu, self.commands, command_params)
+        job_generator = JobGenerator(self.queue_gpu, self.commands, command_params=command_params)
         assert_equal(len(job_generator.pbs_list), 4)
         assert_equal([pbs.commands[0] for pbs in job_generator.pbs_list], self.commands)
 
@@ -86,7 +86,7 @@ class TestJobGenerator(object):
     def test_write_pbs_files(self):
         commands = ["echo 1", "echo 2", "echo 3", "echo 4"]
         command_params = {'nb_cores_per_command': self.cores}
-        job_generator = JobGenerator(self.queue, commands, command_params)
+        job_generator = JobGenerator(self.queue, commands, command_params=command_params)
         filenames = job_generator.write_pbs_files(self.testing_dir)
         assert_equal(len(filenames), 4)
 
