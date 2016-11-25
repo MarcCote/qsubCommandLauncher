@@ -128,6 +128,9 @@ def main():
 
     # Generating all the worker commands
     worker_script = pjoin(os.path.dirname(smartdispatch.__file__), 'workers', 'base_worker.py')
+    worker_script_flags = ''
+    if args.autoresume:
+        worker_script_flags = '-r'
 
     worker_call_prefix = ''
     worker_call_suffix = ''
@@ -135,13 +138,13 @@ def main():
         worker_call_prefix = AUTORESUME_WORKER_CALL_PREFIX
         worker_call_suffix = AUTORESUME_WORKER_CALL_SUFFIX
 
-    COMMAND_STRING = 'cd "{cwd}"; {worker_call_prefix}python2 {worker_script} "{commands_file}" "{log_folder}" '\
+    COMMAND_STRING = 'cd "{cwd}"; {worker_call_prefix}python2 {worker_script} {worker_script_flags} "{commands_file}" "{log_folder}" '\
                      '1>> "{log_folder}/worker/$PBS_JOBID\"\"_worker_{{ID}}.o" '\
                      '2>> "{log_folder}/worker/$PBS_JOBID\"\"_worker_{{ID}}.e" &'\
                      '{worker_call_suffix}'
-    COMMAND_STRING = COMMAND_STRING.format(cwd=os.getcwd(), worker_call_prefix=worker_call_prefix, worker_script=worker_script, 
-                                           commands_file=command_manager._commands_filename, log_folder=path_job_logs,
-                                           worker_call_suffix=worker_call_suffix)
+    COMMAND_STRING = COMMAND_STRING.format(cwd=os.getcwd(), worker_call_prefix=worker_call_prefix, worker_script=worker_script,
+                                           worker_script_flags=worker_script_flags, commands_file=command_manager._commands_filename,
+                                           log_folder=path_job_logs, worker_call_suffix=worker_call_suffix)
     commands = [COMMAND_STRING.format(ID=i) for i in range(args.pool)]
 
     # TODO: use args.memPerNode instead of args.memPerNode
