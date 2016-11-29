@@ -167,7 +167,7 @@ def log_command_line(path_job, command_line):
         command_line_log.write(command_line + "\n\n")
 
 
-def launch_jobs(launcher, pbs_filenames, cluster_name, path_job):
+def launch_jobs(launcher, pbs_filenames, cluster_name, path_job):  # pragma: no cover
     ''' Invokes launcher on a set of PBS files.
 
     Parameters
