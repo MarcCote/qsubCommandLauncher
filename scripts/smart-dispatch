@@ -6,7 +6,6 @@ import sys
 import argparse
 import time as t
 from os.path import join as pjoin
-from subprocess import check_output
 from textwrap import dedent
 
 from smartdispatch.command_manager import CommandManager
@@ -14,14 +13,11 @@ from smartdispatch.command_manager import CommandManager
 from smartdispatch.queue import Queue
 from smartdispatch.job_generator import job_generator_factory
 from smartdispatch import get_available_queues
+from smartdispatch import launch_jobs
 from smartdispatch import utils
-from smartdispatch.filelock import open_with_lock
 
 import logging
 import smartdispatch
-
-# For cluster job_id mismatch
-import re
 
 LOGS_FOLDERNAME = "SMART_DISPATCH_LOGS"
 CLUSTER_NAME = utils.detect_cluster()
@@ -45,7 +41,7 @@ for WORKER_PID in $WORKER_PIDS; do
 done
 if [ "$NEED_TO_RESUME" = true ]; then
     echo "Autoresuming using: {{launcher}} $PBS_FILENAME"
-    {{launcher}} $PBS_FILENAME
+    sd-launch-pbs --launcher {{launcher}} --pbs $PBS_FILENAME --pathJob {{path_job}}
 fi
 """.format(timeout_exit_code=TIMEOUT_EXIT_CODE)
 
@@ -165,7 +161,7 @@ def main():
     epilog = ['wait']
     if args.autoresume:
         prolog = [AUTORESUME_PROLOG]
-        epilog = [AUTORESUME_EPILOG.format(launcher=LAUNCHER if args.launcher is None else args.launcher)]
+        epilog = [AUTORESUME_EPILOG.format(launcher=LAUNCHER if args.launcher is None else args.launcher, path_job=path_job)]
 
     job_generator = job_generator_factory(queue, commands, prolog, epilog, command_params, CLUSTER_NAME, path_job)
     if args.pbsFlags is not None:
@@ -176,24 +172,7 @@ def main():
     print "## {nb_commands} command(s) will be executed in {nb_jobs} job(s) ##".format(nb_commands=nb_commands, nb_jobs=len(pbs_filenames))
     print "Batch UID:\n{batch_uid}".format(batch_uid=jobname)
     if not args.doNotLaunch:
-        jobs_id = []
-        for pbs_filename in pbs_filenames:
-            qsub_output = check_output('PBS_FILENAME={pbs_filename} {launcher} {pbs_filename}'.format(
-                launcher=LAUNCHER if args.launcher is None else args.launcher, pbs_filename=pbs_filename), shell=True)
-            jobs_id += [qsub_output.strip()]
-
-            # On some clusters, SRMJID and PBS_JOBID don't match
-            if CLUSTER_NAME in ['helios']:
-                qstat_out = check_output(['qstat', '-f']).split('Job Id: ')
-                for job in qstat_out:
-                    if re.search(r"SRMJID:{job_id}".format(job_id=jobs_id[-1]), job):
-                        pbs_job_id = re.match(r"[0-9a-zA-Z.-]*", job).group()
-                        jobs_id[-1] = '{pbs}'.format(pbs=pbs_job_id)
-
-        with open_with_lock(pjoin(path_job, "jobs_id.txt"), 'a') as jobs_id_file:
-            jobs_id_file.writelines(t.strftime("## %Y-%m-%d %H:%M:%S ##\n"))
-            jobs_id_file.writelines("\n".join(jobs_id) + "\n")
-        print "\nJobs id:\n{jobs_id}".format(jobs_id=" ".join(jobs_id))
+        launch_jobs(LAUNCHER if args.launcher is None else args.launcher, pbs_filenames, CLUSTER_NAME, path_job)
     print "\nLogs, command, and jobs id related to this batch will be in:\n {smartdispatch_folder}".format(smartdispatch_folder=path_job)
 
 
