@@ -41,7 +41,7 @@ for WORKER_PID in $WORKER_PIDS; do
 done
 if [ "$NEED_TO_RESUME" = true ]; then
     echo "Autoresuming using: {{launcher}} $PBS_FILENAME"
-    sd-launch-pbs --launcher {{launcher}} --pbs $PBS_FILENAME --pathJob {{path_job}}
+    sd-launch-pbs --launcher {{launcher}} $PBS_FILENAME {{path_job}}
 fi
 """.format(timeout_exit_code=TIMEOUT_EXIT_CODE)
 
